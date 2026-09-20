@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+<meta name="description" content="What changes in Jev's answer when the only thing that changes is who the person is.">
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #fafafa; --panel: #ffffff; --line: #e4e4e7; --ink: #18181b;
+  --muted: #71717a; --faint: #a1a1aa; --bad: #dc2626; --good: #059669; --accent: #18181b;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #09090b; --panel: #18181b; --line: #27272a; --ink: #f4f4f5;
+    --muted: #a1a1aa; --faint: #71717a; --bad: #f87171; --good: #34d399; --accent: #f4f4f5;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1120px; margin: 0 auto; padding: 40px 16px 80px; }
+header { border-bottom: 1px solid var(--line); padding-bottom: 24px; }
+h1 { font-size: 26px; margin: 0 0 6px; letter-spacing: -0.02em; }
+.lede { color: var(--muted); margin: 0; max-width: 60ch; }
+.meta { color: var(--faint); font-size: 13px; margin-top: 10px; }
+.cards { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); margin-top: 28px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+.card dt { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.card dd { margin: 6px 0 0; font-size: 19px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.card p { margin: 6px 0 0; font-size: 12px; color: var(--muted); line-height: 1.45; }
+.ok { color: var(--good); } .warn { color: var(--bad); }
+nav { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin-top: 36px; }
+nav button {
+  background: none; border: 0; border-bottom: 2px solid transparent; color: var(--muted);
+  font: inherit; font-weight: 500; font-size: 14px; padding: 9px 15px; cursor: pointer; margin-bottom: -1px;
+}
+nav button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+section { margin-top: 24px; }
+section[hidden] { display: none; }
+.note { color: var(--muted); font-size: 14px; max-width: 78ch; }
+.controls { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; font-size: 14px; margin-bottom: 16px; }
+.controls label { display: flex; gap: 7px; align-items: center; color: var(--muted); }
+select { font: inherit; padding: 4px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--ink); }
+.count { color: var(--faint); font-size: 13px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 500; padding: 8px 10px 8px 0; }
+td { padding: 7px 10px 7px 0; border-top: 1px solid var(--line); }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+tr.control { opacity: 0.45; }
+.bar { position: relative; height: 7px; border-radius: 4px; background: var(--line); width: 150px; }
+.bar i { position: absolute; height: 7px; border-radius: 4px; display: block; }
+.q-sig { font-weight: 600; } .q-not { color: var(--faint); }
+.scroll { overflow-x: auto; }
+.matrix { font-size: 12px; width: auto; }
+.matrix th.swap, .matrix td.swap { position: sticky; left: 0; background: var(--bg); white-space: nowrap; padding-right: 14px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.matrix th.q { width: 86px; vertical-align: bottom; font-weight: 400; }
+.matrix th.q span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.matrix th.q span.scn { font-size: 10px; color: var(--faint); }
+.matrix td.cell { text-align: center; font-variant-numeric: tabular-nums; padding: 5px 4px; border-top: 1px solid var(--line); }
+footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--faint); font-size: 13px; }
+footer a { color: var(--muted); }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.92em; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>__TITLE__</h1>
+    <p class="lede">What changes in Jev's answer when the only thing that changes is who the person is.</p>
+    <p class="meta" id="meta"></p>
+  </header>
+
+  <dl class="cards" id="cards"></dl>
+
+  <nav id="tabs">
+    <button data-tab="findings" aria-selected="true">Findings</button>
+    <button data-tab="questions" aria-selected="false">By question</button>
+    <button data-tab="method" aria-selected="false">Method checks</button>
+  </nav>
+
+  <section id="findings">
+    <div class="controls">
+      <label>Condition <select id="f-condition"></select></label>
+      <label><input type="checkbox" id="f-significant"> significant only</label>
+      <label><input type="checkbox" id="f-hide-control" checked> hide control cells</label>
+      <span class="count" id="f-count"></span>
+    </div>
+    <p class="note">
+      Each row is one person against their own anchor, identical in every way but the attribute named.
+      Delta is in favourability, signed so that below zero is worse treatment. <em>q</em> is the
+      false-discovery rate after correcting for every comparison the run made.
+    </p>
+    <div class="scroll"><table id="f-table"></table></div>
+  </section>
+
+  <section id="questions" hidden>
+    <div class="controls">
+      <label>Attribute <select id="m-attribute"></select></label>
+      <label>Condition <select id="m-condition"></select></label>
+    </div>
+    <p class="note">
+      The same comparisons kept per question instead of averaged. This is where a difference that only
+      shows up in one decision &mdash; whether a guarantor is demanded, say, or whether an application is
+      pulled out for a human to look at &mdash; stops being averaged away by the questions that were
+      answered evenly. Red is worse treatment, green better; cells stay faint unless the effect survived
+      correction.
+    </p>
+    <div class="scroll"><table class="matrix" id="m-table"></table></div>
+  </section>
+
+  <section id="method" hidden>
+    <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0">Does the question respond to the case?</h2>
+    <p class="note">
+      A question answered the same way whether the candidate has three years or nine is not measuring
+      anything, and a group difference found on it would be noise with a story attached.
+    </p>
+    <div class="scroll"><table id="v-table"></table></div>
+
+    <h2 style="font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:36px 0 0">What attaching a person does at all</h2>
+    <p class="note">Mean favourability under each exposure condition, pooled over everyone.</p>
+    <div class="scroll"><table id="c-table"></table></div>
+  </section>
+
+  <footer id="footer"></footer>
+</div>
+
+<script id="report" type="application/json">__REPORT__</script>
+<script>
+(function () {
+  const report = JSON.parse(document.getElementById('report').textContent);
+  const paired = report.paired || {};
+  const overall = paired.overall || [];
+  const byMeasure = paired.by_measure || [];
+  const fmt = (n, d = 3) => (n > 0 ? '+' : '') + n.toFixed(d);
+  const el = (id) => document.getElementById(id);
+
+  /* Header ---------------------------------------------------------------- */
+  const run = report.run;
+  el('meta').textContent = [
+    run.design + ' design',
+    run.personas + ' people',
+    run.calls.toLocaleString() + ' calls',
+    run.scenarios.length + ' scenarios',
+    'model ' + run.model,
+  ].join(' · ');
+
+  const control = (report.calibration && report.calibration.overall && report.calibration.overall.invisible) || null;
+  const findings = overall.filter((t) => t.significant && t.visible !== false).length;
+  const noise = (paired.null && paired.null.sd) ?? report.noise_floor.pooled_sd;
+
+  el('cards').innerHTML = [
+    ['Run', run.name, run.preset + ' · seed ' + run.seed + ' · ' + run.mean_latency_ms + 'ms per call', ''],
+    ['Noise floor', noise, 'How far the same request moves when nothing about it changes. Nothing smaller counts.', ''],
+    ['False positives', control ? control.significant + ' / ' + control.tests : '—',
+      'Comparisons that cannot be real, because the model never saw the thing that changed.',
+      control && control.significant === 0 ? 'ok' : 'warn'],
+    ['Findings', findings, 'Attribute swaps that survived correction for how many comparisons were made.', ''],
+  ].map(([t, v, p, cls]) =>
+    '<div class="card"><dt>' + t + '</dt><dd class="' + cls + '">' + v + '</dd><p>' + p + '</p></div>'
+  ).join('');
+
+  /* Tabs ------------------------------------------------------------------ */
+  el('tabs').addEventListener('click', (e) => {
+    const button = e.target.closest('button');
+    if (!button) return;
+    for (const b of el('tabs').children) b.setAttribute('aria-selected', String(b === button));
+    for (const id of ['findings', 'questions', 'method']) el(id).hidden = id !== button.dataset.tab;
+  });
+
+  const fill = (select, values, all = 'all') => {
+    select.innerHTML = '<option value="' + all + '">' + all + '</option>'
+      + values.map((v) => '<option value="' + v + '">' + v + '</option>').join('');
+  };
+
+  /* Findings -------------------------------------------------------------- */
+  const conditions = [...new Set(overall.map((t) => t.condition))];
+  fill(el('f-condition'), conditions);
+
+  function bar(delta) {
+    const width = Math.min(100, Math.abs(delta) * 400);
+    const left = delta < 0 ? 50 - width / 2 : 50;
+    return '<span class="bar"><i style="width:' + width + '%;margin-left:' + left + '%;background:'
+      + (delta < 0 ? 'var(--bad)' : 'var(--good)') + '"></i></span>';
+  }
+
+  function renderFindings() {
+    const condition = el('f-condition').value;
+    const rows = overall.filter((t) =>
+      (condition === 'all' || t.condition === condition)
+      && (!el('f-significant').checked || t.significant)
+      && (!el('f-hide-control').checked || t.visible !== false)
+    );
+
+    el('f-count').textContent = rows.length + ' comparisons';
+    el('f-table').innerHTML =
+      '<thead><tr><th>Attribute</th><th>Swapped to</th><th>From</th><th>Condition</th>'
+      + '<th class="num">Pairs</th><th class="num">Delta</th><th></th><th class="num">q</th></tr></thead><tbody>'
+      + rows.map((t) =>
+        '<tr class="' + (t.visible === false ? 'control' : '') + '">'
+        + '<td>' + (t.factor_label || t.factor) + '</td>'
+        + '<td><strong>' + t.level + '</strong></td>'
+        + '<td style="color:var(--muted)">' + t.reference + '</td>'
+        + '<td style="color:var(--muted)">' + t.condition + '</td>'
+        + '<td class="num" style="color:var(--muted)">' + (t.pairs ?? t.n) + '</td>'
+        + '<td class="num" style="color:' + (t.delta < 0 ? 'var(--bad)' : 'var(--good)') + '">' + fmt(t.delta) + '</td>'
+        + '<td>' + bar(t.delta) + '</td>'
+        + '<td class="num ' + (t.significant ? 'q-sig' : 'q-not') + '">' + t.q.toFixed(3) + '</td>'
+        + '</tr>'
+      ).join('') + '</tbody>';
+  }
+
+  for (const id of ['f-condition', 'f-significant', 'f-hide-control']) el(id).addEventListener('change', renderFindings);
+  renderFindings();
+
+  /* By question ----------------------------------------------------------- */
+  const visible = byMeasure.filter((t) => t.visible !== false);
+  fill(el('m-attribute'), [...new Set(visible.map((t) => t.factor))].sort());
+  fill(el('m-condition'), [...new Set(visible.map((t) => t.condition))]);
+
+  const measures = [...new Set(visible.map((t) => t.measure))].sort();
+
+  function renderMatrix() {
+    const attribute = el('m-attribute').value;
+    const condition = el('m-condition').value;
+    const rows = visible.filter((t) =>
+      (attribute === 'all' || t.factor === attribute) && (condition === 'all' || t.condition === condition)
+    );
+
+    const index = new Map();
+    for (const t of rows) index.set(t.factor + ':' + t.level + '|' + t.measure, t);
+    const swaps = [...new Set(rows.map((t) => t.factor + ':' + t.level))].sort();
+
+    const tint = (t) => {
+      if (!t) return '';
+      const strength = Math.min(1, Math.abs(t.delta) / 0.15) * (t.significant ? 1 : 0.25);
+      const rgb = t.delta < 0 ? '239,68,68' : '16,185,129';
+      return 'background-color:rgba(' + rgb + ',' + (strength * 0.8).toFixed(3) + ')';
+    };
+
+    el('m-table').innerHTML =
+      '<thead><tr><th class="swap">Swap</th>'
+      + measures.map((m) =>
+        '<th class="q" title="' + m + '"><span>' + m.split('.')[1] + '</span>'
+        + '<span class="scn">' + m.split('.')[0] + '</span></th>'
+      ).join('') + '</tr></thead><tbody>'
+      + swaps.map((s) =>
+        '<tr><td class="swap">' + s + '</td>'
+        + measures.map((m) => {
+          const t = index.get(s + '|' + m);
+          return '<td class="cell" style="' + tint(t) + '" title="'
+            + (t ? s + ' on ' + m + ': ' + fmt(t.delta) + ' (q=' + t.q.toFixed(3) + ')' : 'not measured')
+            + '">' + (t ? t.delta.toFixed(2) : '') + '</td>';
+        }).join('') + '</tr>'
+      ).join('') + '</tbody>';
+  }
+
+  for (const id of ['m-attribute', 'm-condition']) el(id).addEventListener('change', renderMatrix);
+  renderMatrix();
+
+  /* Method ---------------------------------------------------------------- */
+  el('v-table').innerHTML =
+    '<thead><tr><th>Question</th><th>Means by case</th><th class="num">Span</th><th>Responds</th></tr></thead><tbody>'
+    + Object.entries(report.validity).map(([key, check]) =>
+      '<tr><td><code>' + key + '</code></td>'
+      + '<td style="color:var(--muted)">' + Object.entries(check.means_by_variant)
+        .map(([v, m]) => v + ' ' + m.toFixed(3)).join(' &nbsp; ') + '</td>'
+      + '<td class="num">' + (check.weak_to_strong === null ? '—' : fmt(check.weak_to_strong)) + '</td>'
+      + '<td class="' + (check.responds_to_merits ? 'ok' : 'warn') + '">'
+      + (check.responds_to_merits ? 'yes' : (check.pinned_at === 'uniform' ? 'same answer every time' : 'flat')) + '</td></tr>'
+    ).join('') + '</tbody>';
+
+  const conditionNames = run.conditions;
+  el('c-table').innerHTML =
+    '<thead><tr><th>Question</th>' + conditionNames.map((c) => '<th class="num">' + c + '</th>').join('')
+    + '<th class="num">Shift</th></tr></thead><tbody>'
+    + Object.entries(report.conditions).map(([key, entry]) => {
+      const values = conditionNames.map((c) => entry.means[c]);
+      const shift = values.length === 2 && values.every((v) => v !== undefined) ? values[1] - values[0] : null;
+      return '<tr><td><code>' + key + '</code></td>'
+        + values.map((v) => '<td class="num">' + (v === undefined ? '—' : v.toFixed(3)) + '</td>').join('')
+        + '<td class="num" style="color:var(--muted)">' + (shift === null ? '—' : fmt(shift)) + '</td></tr>';
+    }).join('') + '</tbody>';
+
+  el('footer').innerHTML =
+    'Generated from <code>' + run.name + '</code> on ' + (report.generated_at || '').slice(0, 10)
+    + '. Every number here comes from the run’s own report artefact, unchanged. '
+    + 'The raw calls behind each figure are in the repository and in the live dashboard, not in this page.';
+})();
+</script>
+</body>
+</html>
