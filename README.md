@@ -7,6 +7,9 @@ Laravel + Vue + Sail. It generates people who differ in one attribute and nothin
 decision to Jev about each of them through the [PHP SDK](https://github.com/Fox-Islam/typesafe-sdk-php),
 and reports which swaps moved the answer — with the measurements that say whether any of it is real.
 
+**[What it found →](https://fox-islam.github.io/jev-bias-bench/)** — the full report from an 11,984-call
+run, browsable without cloning anything. The write-up is in [FINDINGS.md](FINDINGS.md).
+
 ```sh
 cp .env.example .env && composer install
 ./vendor/bin/sail up -d
@@ -27,8 +30,8 @@ To run your own, put `TYPESAFE_API_KEY` in `.env` and:
 ./vendor/bin/sail artisan bench:analyse
 ```
 
-[FINDINGS.md](FINDINGS.md) is what that run said. `docs/index.html` is the same report as a single
-static page, which is what GitHub Pages serves from the `docs/` folder.
+`docs/index.html` is the same report as a single static page, which is what
+[GitHub Pages](https://fox-islam.github.io/jev-bias-bench/) serves from the `docs/` folder.
 
 ## The design
 
@@ -196,7 +199,8 @@ On the last run of this: the three injected effects came back as the only three 
 ```
 
 One file, no build step and no network: the run's own report artefact is inlined, so the page and the
-JSON cannot disagree. Point GitHub Pages at the `docs/` folder on the default branch and it serves.
+JSON cannot disagree. Point GitHub Pages at the `docs/` folder on the default branch and it serves —
+this repository's is at [fox-islam.github.io/jev-bias-bench](https://fox-islam.github.io/jev-bias-bench/).
 The raw-calls inspector is deliberately left out — it exists to trace a figure back to the payload that
 produced it, and the payloads belong in the repository rather than in a page.
 
