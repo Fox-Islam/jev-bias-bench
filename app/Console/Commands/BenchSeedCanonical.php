@@ -24,7 +24,7 @@ class BenchSeedCanonical extends Command
 {
     protected $signature = 'bench:seed-canonical
         {--file=database/seed/canonical-run.sql.gz : The dump to load}
-        {--name=deep : The run the dump contains}
+        {--name=jev-latest-deep,claude-opus-5-standard : The runs the dump contains}
         {--force : Replace that run if it is already loaded}';
 
     protected $description = 'Load the canonical benchmark run that ships with this repository';
@@ -48,18 +48,29 @@ class BenchSeedCanonical extends Command
             return self::FAILURE;
         }
 
-        $name = (string) $this->option('name');
-        $existing = Run::where('name', $name)->first();
+        $names = array_map('trim', explode(',', (string) $this->option('name')));
+        $existing = Run::whereIn('name', $names)->get();
 
-        if ($existing !== null) {
+        if ($existing->isNotEmpty()) {
             if (! $this->option('force')) {
-                $this->warn("A run named [{$name}] is already loaded. Pass --force to replace it.");
+                $this->warn('Already loaded: '.$existing->pluck('name')->implode(', ').'. Pass --force to replace.');
 
                 return self::FAILURE;
             }
 
-            $this->line("Replacing the existing [{$name}] run...");
-            $existing->delete();
+            $this->line('Replacing '.$existing->pluck('name')->implode(', ').'...');
+            $existing->each(fn (Run $run) => $run->delete());
+        }
+
+        // The dump restores its own primary keys, so a run that already occupies
+        // one of them collides. Cheap to detect and impossible to diagnose from
+        // the SQLSTATE 23505 it would otherwise raise halfway through a load.
+        $taken = Run::whereIn('id', $this->runIds($path))->get();
+        if ($taken->isNotEmpty()) {
+            $this->error('These runs hold ids the dump needs: '.$taken->pluck('name')->implode(', ').'.');
+            $this->line('The dump restores fixed ids. Load it into a database without those runs, or remove them first.');
+
+            return self::FAILURE;
         }
 
         $this->line('Loading '.number_format(filesize($path) / 1024).'KB of compressed run data...');
@@ -81,7 +92,7 @@ class BenchSeedCanonical extends Command
         $this->advanceSequences();
 
         $this->info(sprintf(
-            'Loaded %d statements: %d run, %d people, %d calls, %d answers.',
+            'Loaded %d statements: %d runs, %d people, %d calls, %d answers.',
             $statements,
             Run::count(),
             Person::count(),
@@ -89,20 +100,53 @@ class BenchSeedCanonical extends Command
             Outcome::count(),
         ));
 
-        // The report is derived, so it is not in the dump. Computing it here
+        // Reports are derived, so they are not in the dump. Computing them here
         // rather than on the first page load keeps the dashboard from hanging
         // for a minute the first time someone opens it.
-        $run = Run::latest('id')->first();
-        if ($run !== null) {
-            $this->line('Computing the report...');
+        foreach (Run::whereIn('name', $names)->get() as $run) {
+            $this->line("Computing the report for {$run->name}...");
             $store->put($run);
-            $this->line('Report at <info>storage/app/private/'.$store->path($run).'</info>');
         }
 
         $this->newLine();
         $this->line('Now: <info>php artisan bench:analyse</info>, or open the dashboard.');
 
         return self::SUCCESS;
+    }
+
+    /**
+     * The run ids the dump will insert, read off its own INSERT statements.
+     *
+     * @return list<int>
+     */
+    private function runIds(string $path): array
+    {
+        $ids = [];
+        $inRuns = false;
+        $handle = gzopen($path, 'rb');
+
+        try {
+            while (($line = gzgets($handle)) !== false) {
+                if (str_starts_with($line, 'INSERT INTO public.runs ')) {
+                    $inRuns = true;
+
+                    continue;
+                }
+
+                if ($inRuns) {
+                    if (preg_match('/^\s*\((\d+),/', $line, $m)) {
+                        $ids[] = (int) $m[1];
+                    }
+                    if (str_contains($line, ';')) {
+                        $inRuns = false;
+                    }
+                }
+            }
+        } finally {
+            gzclose($handle);
+        }
+
+        return $ids;
     }
 
     /**
