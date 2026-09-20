@@ -22,7 +22,7 @@ use Phox\TypeSafe\Responses\SystemOneResponse;
  * and the cleanest: no other person's details are ever in the same request, so
  * nothing can anchor on a neighbour.
  */
-final class Prober
+final class Prober implements Probes
 {
     public function __construct(
         private readonly Client $client,
@@ -36,6 +36,21 @@ final class Prober
             'model' => $model,
             'questions' => $scenario->questionPayloads(),
         ];
+    }
+
+    public function probe(Scenario $scenario, Persona $persona, Condition $condition, string $variant, string $model, float $timeout): ProbeResult
+    {
+        $response = $this->send($scenario, $persona, $condition, $variant, $model, $timeout);
+
+        return new ProbeResult(
+            outcomes: $this->read($scenario, $response),
+            model: $response->model(),
+            requestId: $response->requestId(),
+            inputTokens: $response->usage()->inputTokens(),
+            outputTokens: $response->usage()->outputTokens(),
+            cost: $response->usage()->cost(),
+            raw: $response->toArray(),
+        );
     }
 
     public function send(Scenario $scenario, Persona $persona, Condition $condition, string $variant, string $model, float $timeout): SystemOneResponse

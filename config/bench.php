@@ -17,4 +17,20 @@ return [
     'bootstrap_samples' => (int) env('BENCH_BOOTSTRAP', 2000),
 
     'permutations' => (int) env('BENCH_PERMUTATIONS', 4000),
+
+    /*
+     * Who is being measured. `jev` asks TypeSafe through the SDK and reads the
+     * distributions it returns; `openrouter` puts the same scenarios to a chat
+     * model and asks it to write the numbers down. The second is a weaker
+     * instrument — see the note on OpenRouterProber — so effect sizes do not
+     * compare across drivers, though the shape of the findings does.
+     */
+    'driver' => env('BENCH_DRIVER', 'jev'),
+
+    'openrouter' => [
+        'key' => env('OPENROUTER_API_KEY'),
+        'base_url' => env('OPENROUTER_BASE_URL', 'https://openrouter.ai/api/v1'),
+        'model' => env('BENCH_OPENROUTER_MODEL', 'anthropic/claude-opus-5'),
+        'reasoning_effort' => env('BENCH_REASONING_EFFORT'),
+    ],
 ];

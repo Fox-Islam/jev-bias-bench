@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Console\Commands;
 
+use App\Bench\Probing\OpenRouterProber;
 use App\Bench\Probing\Prober;
+use App\Bench\Probing\Probes;
 use App\Bench\Probing\Worker;
 use App\Models\Run;
 use Illuminate\Console\Command;
@@ -24,7 +26,7 @@ class BenchWork extends Command
         $run = Run::where('name', $this->option('run'))->firstOrFail();
 
         $worker = new Worker(
-            prober: new Prober($client),
+            prober: $this->prober($client),
             timeout: (float) config('bench.timeout'),
             maxAttempts: (int) config('bench.max_attempts'),
         );
@@ -52,5 +54,18 @@ class BenchWork extends Command
         }
 
         return self::SUCCESS;
+    }
+
+    private function prober(Client $client): Probes
+    {
+        if (config('bench.driver') !== 'openrouter') {
+            return new Prober($client);
+        }
+
+        return new OpenRouterProber(
+            apiKey: (string) config('bench.openrouter.key'),
+            baseUrl: (string) config('bench.openrouter.base_url'),
+            reasoningEffort: config('bench.openrouter.reasoning_effort'),
+        );
     }
 }

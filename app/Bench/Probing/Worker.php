@@ -25,7 +25,7 @@ use Throwable;
 final class Worker
 {
     public function __construct(
-        private readonly Prober $prober,
+        private readonly Probes $prober,
         private readonly float $timeout = 30.0,
         private readonly int $maxAttempts = 3,
     ) {}
@@ -90,7 +90,7 @@ final class Worker
         $started = hrtime(true);
 
         try {
-            $response = $this->prober->send($scenario, $persona, $condition, $probe->case_variant, $run->model, $this->timeout);
+            $result = $this->prober->probe($scenario, $persona, $condition, $probe->case_variant, $run->model, $this->timeout);
         } catch (TypeSafeException|Throwable $e) {
             $probe->forceFill([
                 'status' => $probe->attempts >= $this->maxAttempts ? 'failed' : 'retry',
@@ -101,26 +101,24 @@ final class Worker
             return false;
         }
 
-        $outcomes = $this->prober->read($scenario, $response);
-
-        DB::transaction(function () use ($probe, $response, $outcomes, $started, $scenario, $persona, $condition, $run) {
+        DB::transaction(function () use ($probe, $result, $started, $scenario, $persona, $condition, $run) {
             $probe->forceFill([
                 'status' => 'done',
                 'error' => null,
                 'request_payload' => $this->prober->request($scenario, $persona, $condition, $probe->case_variant, $run->model),
-                'response_payload' => $response->toArray(),
-                'request_id' => $response->requestId(),
+                'response_payload' => $result->raw,
+                'request_id' => $result->requestId,
                 'latency_ms' => (int) ((hrtime(true) - $started) / 1e6),
-                'input_tokens' => $response->usage()->inputTokens(),
-                'output_tokens' => $response->usage()->outputTokens(),
-                'cost' => $response->usage()->cost(),
+                'input_tokens' => $result->inputTokens,
+                'output_tokens' => $result->outputTokens,
+                'cost' => $result->cost,
                 'completed_at' => now(),
             ])->save();
 
             Outcome::where('probe_id', $probe->id)->delete();
 
             $rows = [];
-            foreach ($outcomes as $outcome) {
+            foreach ($result->outcomes as $outcome) {
                 $rows[] = [
                     'run_id' => $probe->run_id,
                     'probe_id' => $probe->id,

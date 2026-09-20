@@ -20,9 +20,26 @@ final class StateBuilder
     /** @return array<string, mixed> */
     public function build(Scenario $scenario, Persona $persona, Condition $condition, string $variant): array
     {
+        [$case, $subject] = $this->parts($scenario, $persona, $condition, $variant);
+
+        return [$scenario->stateKey => $case, $scenario->subjectRole => $subject];
+    }
+
+    /**
+     * The same state split at its only seam.
+     *
+     * Everyone facing a scenario faces the identical case; the person is the
+     * only thing that changes. Drivers that can cache a prompt prefix need those
+     * two apart, because the first half is worth caching across a whole scenario
+     * and the second half is the entire experiment.
+     *
+     * @return array{0: array<string, mixed>, 1: array<string, mixed>}
+     */
+    public function parts(Scenario $scenario, Persona $persona, Condition $condition, string $variant): array
+    {
         return [
-            $scenario->stateKey => $scenario->facts($variant, $persona),
-            $scenario->subjectRole => $this->subject($persona, $condition, $scenario->subjectRole),
+            $scenario->facts($variant, $persona),
+            $this->subject($persona, $condition, $scenario->subjectRole),
         ];
     }
 
