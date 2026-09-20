@@ -23,7 +23,8 @@ class BenchPublish extends Command
     protected $signature = 'bench:publish
         {--run= : The run to publish; defaults to the newest}
         {--out=docs/index.html : Where to write it}
-        {--title= : Page title; defaults to the app name}';
+        {--title= : Page title; defaults to the app name}
+        {--nav=* : Other runs to link, as "Label=file.html"; the current one renders as the active pill}';
 
     protected $description = 'Write a run up as a single static page for GitHub Pages';
 
@@ -37,9 +38,10 @@ class BenchPublish extends Command
         $stub = file_get_contents(resource_path('stubs/pages.html'));
 
         $html = str_replace(
-            ['__TITLE__', '__REPORT__'],
+            ['__TITLE__', '__NAV__', '__REPORT__'],
             [
                 e((string) ($this->option('title') ?: config('app.name'))),
+                $this->nav(),
                 // Into a <script type="application/json"> block, so the only
                 // sequence that could end it early is the closing tag itself.
                 str_replace('</', '<\/', json_encode($report, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)),
@@ -61,6 +63,30 @@ class BenchPublish extends Command
         ));
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Pills linking the runs to each other.
+     *
+     * A benchmark that has measured two models is only useful if you can get
+     * from one set of numbers to the other without knowing the file names.
+     */
+    private function nav(): string
+    {
+        $links = [];
+
+        foreach ((array) $this->option('nav') as $entry) {
+            [$label, $href] = array_pad(explode('=', (string) $entry, 2), 2, null);
+            if ($href === null) {
+                continue;
+            }
+
+            $links[] = $href === basename((string) $this->option('out'))
+                ? '<span aria-current="page">'.e($label).'</span>'
+                : '<a href="'.e($href).'">'.e($label).'</a>';
+        }
+
+        return implode('', $links);
     }
 
     /**

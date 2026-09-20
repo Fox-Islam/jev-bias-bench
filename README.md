@@ -7,21 +7,22 @@ Laravel + Vue + Sail. It generates people who differ in one attribute and nothin
 decision to Jev about each of them through the [PHP SDK](https://github.com/Fox-Islam/typesafe-sdk-php),
 and reports which swaps moved the answer — with the measurements that say whether any of it is real.
 
-**[What it found →](https://fox-islam.github.io/jev-bias-bench/)** — the full report from an 11,984-call
-run, browsable without cloning anything. The write-up is in [FINDINGS.md](FINDINGS.md).
+**What it found:** [Jev →](https://fox-islam.github.io/jev-bias-bench/) ·
+[Claude Opus 5 →](https://fox-islam.github.io/jev-bias-bench/claude.html) — both browsable without
+cloning anything, from an 11,984-call and a 2,984-call run on the same design.
 
 ```sh
 cp .env.example .env && composer install
 ./vendor/bin/sail up -d
 ./vendor/bin/sail artisan key:generate
 ./vendor/bin/sail artisan migrate
-./vendor/bin/sail artisan bench:seed-canonical     # the run behind FINDINGS.md
+./vendor/bin/sail artisan bench:seed-canonical     # both runs behind the findings
 ./vendor/bin/sail npm install && ./vendor/bin/sail npm run build
 ```
 
 That gives a populated dashboard at `http://localhost:8088` with no API key and nothing spent: the
 11,984-call run the findings are drawn from ships with the repository, every call and every answer, in
-`database/seed/canonical-run.sql.gz`. `bench:analyse --run=deep` recomputes the whole report from it.
+`database/seed/canonical-run.sql.gz`. `bench:analyse --run=jev-latest-deep` recomputes the whole report from it.
 
 To run your own, put `TYPESAFE_API_KEY` in `.env` and:
 
@@ -30,8 +31,11 @@ To run your own, put `TYPESAFE_API_KEY` in `.env` and:
 ./vendor/bin/sail artisan bench:analyse
 ```
 
-`docs/index.html` is the same report as a single static page, which is what
-[GitHub Pages](https://fox-islam.github.io/jev-bias-bench/) serves from the `docs/` folder.
+Two runs ship with it: **[FINDINGS.md](FINDINGS.md)** for Jev and
+**[FINDINGS-claude.md](FINDINGS-claude.md)** for Claude Opus 5 on the same design. Both are published as
+static pages — [Jev](https://fox-islam.github.io/jev-bias-bench/) and
+[Claude](https://fox-islam.github.io/jev-bias-bench/claude.html) — which is what GitHub Pages serves
+from the `docs/` folder.
 
 ## The design
 
@@ -56,9 +60,12 @@ combine.
 
 ### What it compares against
 
-**The model's own noise, measured.** A subset of calls are repeated unchanged. The spread of those
-repeats is how much Jev moves when nothing does, and it is the distribution every difference is tested
-against. No assumption that answers are normally distributed — they are bounded in [0, 1] and pile up at
+**The model's own noise, measured — across the run, not within a burst.** A subset of calls are repeated unchanged, and the spread of those
+repeats is the distribution every difference is tested against. Those repeats are scattered through the
+run rather than planned next to each other, which matters more than it sounds: measured both ways, a
+clustered null understates real variability by 1.9x on Jev and 3.3x on Claude Opus 5 — enough to
+promote noise to a finding. The two shipped runs were planned before that fix and their p-values are
+optimistic by those factors; both findings documents say so and say by how much. No assumption that answers are normally distributed — they are bounded in [0, 1] and pile up at
 the ends, so a t-test on them is a guess in a lab coat.
 
 **Anchors are asked repeatedly and averaged.** Every swap in a base is compared with the same anchor, so
@@ -148,10 +155,10 @@ signal.
 | `smoke` | counterfactual | 11 | 1 | 15 |
 | `pilot` | counterfactual | 68 | 2 | 388 |
 | `standard` | counterfactual | 333 | 4 | 2,992 |
-| `deep` | counterfactual | 666 | 8 | 12,000 |
+| `jev-latest-deep` | counterfactual | 666 | 8 | 12,000 |
 | `factorial` | orthogonal array | 160 | 4 | 2,080 |
 
-`deep` is the one the repository ships a completed run of.
+`jev-latest-deep` is the one the repository ships a completed run of.
 
 One call per person per scenario — every question in a scenario goes in the same request, since the
 jevsort measurements put a call's cost almost entirely in its round trip rather than in how many
@@ -168,6 +175,7 @@ questions it carries. No two people ever share a request, so nothing can anchor 
 | `bench:status` | Progress, tokens, cost, failures |
 | `bench:reset` | Return abandoned or failed probes to the queue |
 | `bench:analyse` | Compute the report and print the headlines |
+| `bench:batch` | Send a run through OpenRouter's batch endpoint at half price, then collect it |
 | `bench:publish` | Write a run up as one self-contained static page for GitHub Pages |
 | `bench:seed-canonical` | Load the run this repository ships with |
 | `bench:export-variants` | Dump case variants and answer directions for the mock server |
@@ -192,10 +200,93 @@ python3 local/mock-jev.py 8799 &
 On the last run of this: the three injected effects came back as the only three significant findings,
 0 of 23 control comparisons came out significant, and every question passed the validity check.
 
+## Measuring something other than Jev
+
+`BENCH_DRIVER=openrouter` puts the same scenarios to a chat model instead, through
+OpenRouter. Everything below the prober is unchanged — the planner, the pairing, the statistics and
+the dashboard only ever see favourability on [0, 1].
+
+### Running another model
+
+Any model OpenRouter serves with `structured_outputs` among its supported parameters will work. Check
+before committing to one — a model without it returns prose where the benchmark expects a schema, and
+every call fails:
+
+```sh
+curl -s https://openrouter.ai/api/v1/models -H "Authorization: Bearer $OPENROUTER_API_KEY" \
+  | jq -r '.data[] | select(.supported_parameters[]? == "structured_outputs") | .id'
+```
+
+Then set the driver and the model, and name the run after it:
+
+```sh
+# .env
+BENCH_DRIVER=openrouter
+BENCH_OPENROUTER_MODEL=openai/gpt-5          # any id from the list above
+# BENCH_REASONING_EFFORT=low                 # if the model takes it; output tokens are the bulk of the cost
+
+./vendor/bin/sail artisan bench:run --profile=standard --name=gpt-5-standard --plan-only
+./vendor/bin/sail artisan bench:batch submit --run=gpt-5-standard --chunk=500
+./vendor/bin/sail artisan bench:batch status --run=gpt-5-standard --wait
+./vendor/bin/sail artisan bench:analyse --run=gpt-5-standard
+./vendor/bin/sail artisan bench:publish --run=gpt-5-standard --out=docs/gpt-5.html \
+  --nav=Jev=index.html "--nav=Claude Opus 5=claude.html" --nav=GPT-5=gpt-5.html
+```
+
+**Name runs `<model>-<profile>`.** The two shipped here are `jev-latest-deep` and
+`claude-opus-5-standard`; a bare `standard` tells nobody which model produced it, and comparing models
+is the point.
+
+For a model with no `:batch` variant, drop `bench:batch` and use `bench:run --workers=8` to call
+synchronously.
+
+**Read the calibration line before anything else.** The benchmark measures its own false-positive rate
+on every run, from swaps the model could not see, and that rate is a property of the model as much as
+of the method: Jev produced 0 of 100, Claude 5 of 100. A model whose controls light up cannot support
+small findings however good its p-values look.
+
+It is a different instrument, though not — as it turns out — a less precise one. Jev answers a question
+with a distribution it was trained to calibrate. A chat model has no such channel, since OpenRouter
+exposes no logprobs for Anthropic models, so it is asked for the numbers in a strict JSON schema and
+writes them down. That sounds coarser and reads coarser: models round to 0.7 and 0.75 rather than 0.73.
+
+Measured over 225 repeated identical requests, it is not. Claude Opus 5 answers the same question twice
+with a within-cell standard deviation of **0.0088**, against Jev's 0.0085 — the same noise floor, so the
+same resolution at the same number of pairs. An earlier estimate here said 0.020 and twice the noise;
+that came from ten cells in a twelve-call probe and was simply too small a sample to say anything.
+
+What still does not transfer is the scale. **Effect sizes do not compare across drivers** — a −0.03 from
+one is not a −0.03 from the other. The shape of the findings does: which attributes move the answer,
+which questions concentrate them, and how large they are relative to that driver's own noise.
+
+Two discounts are available, and whether they combine depends entirely on how many requests go into a
+batch at once:
+
+| | Cache hit rate | Per call |
+| --- | --- | --- |
+| Synchronous, caching on, 46 calls | 53% of input tokens | $0.0111 |
+| Batch of 46 | **3%** | $0.0070 |
+| Batch of 500 | **84%** | **$0.0026** |
+
+The instructions and the case facts form one cached prefix and the person is the only thing that
+varies, so the ceiling on what can be cached is high. Whether it is reached is a scheduling question: a
+cache entry lives about five minutes, and 46 requests scattered across the batch queue never land close
+enough together to keep one warm. Five hundred requests from the same scenario do — 99% of them hit —
+and the run then gets the batch discount and the cache discount at once, for four times less than
+synchronous.
+
+**Submit in large chunks.** `bench:batch submit --chunk=500` is the default for this reason, and it is
+worth more than the choice between batch and synchronous.
+
+```sh
+./vendor/bin/sail artisan bench:batch submit --run=<name>
+./vendor/bin/sail artisan bench:batch status --run=<name> --wait
+```
+
 ## Publishing
 
 ```sh
-./vendor/bin/sail artisan bench:publish --run=deep      # writes docs/index.html
+./vendor/bin/sail artisan bench:publish --run=jev-latest-deep      # writes docs/index.html
 ```
 
 One file, no build step and no network: the run's own report artefact is inlined, so the page and the

@@ -4,8 +4,8 @@
 built from 6 anchors, 8 scenarios, 2 exposure conditions, 48 paired observations per comparison.**
 
 This is the run shipped with the repository. `sail artisan bench:seed-canonical` loads it into a fresh
-checkout; `bench:analyse --run=deep` reproduces every number below from
-`storage/app/private/reports/deep.json`.
+checkout; `bench:analyse --run=jev-latest-deep` reproduces every number below from
+`storage/app/private/reports/jev-latest-deep.json`.
 
 ## Headline
 

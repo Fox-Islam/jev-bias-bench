@@ -28,6 +28,9 @@ header { border-bottom: 1px solid var(--line); padding-bottom: 24px; }
 h1 { font-size: 26px; margin: 0 0 6px; letter-spacing: -0.02em; }
 .lede { color: var(--muted); margin: 0; max-width: 60ch; }
 .meta { color: var(--faint); font-size: 13px; margin-top: 10px; }
+.runs { margin: 14px 0 0; font-size: 13px; }
+.runs a, .runs span { display: inline-block; padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; margin-right: 6px; text-decoration: none; color: var(--muted); }
+.runs span[aria-current] { border-color: var(--accent); color: var(--ink); font-weight: 600; }
 .cards { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); margin-top: 28px; }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
 .card dt { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
@@ -73,6 +76,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0
     <h1>__TITLE__</h1>
     <p class="lede">What changes in Jev's answer when the only thing that changes is who the person is.</p>
     <p class="meta" id="meta"></p>
+    <p class="runs">__NAV__</p>
   </header>
 
   <dl class="cards" id="cards"></dl>

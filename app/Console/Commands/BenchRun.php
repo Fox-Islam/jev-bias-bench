@@ -53,12 +53,16 @@ class BenchRun extends Command
                 .count($profile->conditions).' conditions, '
                 ."<comment>{$profile->probeCount()}</comment> calls.");
 
+            $openRouter = config('bench.driver') === 'openrouter';
+
             $run = $planner->plan(
                 name: $name,
                 profile: $profile,
                 seed: $seed,
-                provider: (string) config('typesafe.provider', 'typesafe'),
-                model: (string) config('typesafe.model', 'jev-latest'),
+                provider: $openRouter ? 'openrouter' : (string) config('typesafe.provider', 'typesafe'),
+                model: $openRouter
+                    ? (string) config('bench.openrouter.model')
+                    : (string) config('typesafe.model', 'jev-latest'),
             );
         }
 
@@ -117,6 +121,12 @@ class BenchRun extends Command
 
     private function hasKey(): bool
     {
+        if (config('bench.driver') === 'openrouter') {
+            $key = config('bench.openrouter.key');
+
+            return is_string($key) && trim($key) !== '';
+        }
+
         $provider = (string) config('typesafe.provider', 'typesafe');
         $key = $provider === 'openrouter'
             ? (config('typesafe.keys.openrouter') ?: env('OPENROUTER_API_KEY'))
