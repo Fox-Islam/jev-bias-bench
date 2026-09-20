@@ -123,8 +123,18 @@ final class Planner
             }
         }
 
-        DB::transaction(function () use ($batch) {
-            foreach (array_chunk(array_values($batch), 500) as $chunk) {
+        // Workers claim probes in id order, so rows written next to each other
+        // run next to each other. Left in planning order that puts every
+        // repeat of a cell in one tight, cache-warm cluster — and the spread of
+        // those repeats is the null every finding is tested against. Measured
+        // both ways, a clustered null understates a real difference by 1.9x on
+        // Jev and 3.3x on Claude Opus 5, which is enough to turn noise into
+        // findings. Shuffling scatters each cell's repeats across the whole run,
+        // so the null covers the same span of time the comparisons do.
+        $order = new Randomizer(new Mt19937($seed + 11));
+
+        DB::transaction(function () use ($batch, $order) {
+            foreach (array_chunk($order->shuffleArray(array_values($batch)), 500) as $chunk) {
                 Probe::insert($chunk);
             }
         });
